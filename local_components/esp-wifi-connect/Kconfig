@@ -1,0 +1,14 @@
+menu "ESP Wi-Fi Connect (local fork)"
+
+    config WIFI_CONNECT_PORTAL_CHECK
+        bool "Detect and pass captive portals after connecting"
+        default n
+        help
+            After the station gets an IP address, request a small connectivity-check page. When a
+            login page (public, hotel or school Wi-Fi) is in the way, fill it with the account saved
+            for the network, then announce the connection. Costs a short HTTP request on every
+            connect and sends it to connectivitycheck.gstatic.com, so it is off by default. A board
+            enables it through the sdkconfig lines of its config.json. NVS wifi/portal_check
+            (0 or 1) overrides this default at run time.
+
+endmenu

@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Network Configuration</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 16px; font: 16px system-ui, sans-serif; background: #f2f4f7; color: #1d2733; max-width: 520px; margin-inline: auto; }
+  h1 { font-size: 20px; margin: 0 0 12px; }
+  h3 { margin: 0 0 8px; font-size: 15px; }
+  .bar { display: flex; gap: 8px; margin-bottom: 12px; }
+  .bar select, .bar button { flex: 1; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+  .tab { flex: 1; padding: 10px; border: 0; border-radius: 10px; background: #dde3ea; font: inherit; }
+  .tab.active { background: #2f6fed; color: #fff; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+  .section { background: #fff; border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+  label { display: block; margin: 8px 0 4px; font-size: 14px; color: #52606d; }
+  label.inline { display: flex; align-items: center; gap: 8px; color: #1d2733; }
+  input[type=text], input[type=password], input[type=number], select {
+    width: 100%; padding: 11px; border: 1px solid #c4ccd6; border-radius: 8px; font: inherit; background: #fff; }
+  input[type=checkbox] { width: 20px; height: 20px; }
+  button.primary, input[type=submit] {
+    width: 100%; margin-top: 12px; padding: 12px; border: 0; border-radius: 10px;
+    background: #2f6fed; color: #fff; font: inherit; }
+  button:disabled, input[type=submit]:disabled { opacity: .5; }
+  ul { list-style: none; margin: 0; padding: 0; }
+  li { display: flex; align-items: center; gap: 6px; padding: 8px 0; border-bottom: 1px solid #eef1f4; }
+  li span { flex: 1; word-break: break-all; }
+  li button { padding: 6px 10px; border: 0; border-radius: 8px; background: #e7ecf2; font: inherit; }
+  #ap_list a { display: block; padding: 9px 0; color: #2f6fed; text-decoration: none; border-bottom: 1px solid #eef1f4; word-break: break-all; }
+  .error { color: #c62828; min-height: 1.2em; margin: 0 0 6px; }
+  .scanning { color: #7b8794; }
+  #toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #1d2733; color: #fff; padding: 10px 16px; border-radius: 20px; display: none; }
+  #overlay { position: fixed; inset: 0; background: rgba(255,255,255,.85); display: none; align-items: center; justify-content: center; font-size: 18px; }
+  #overlay.show { display: flex; }
+</style>
+</head>
+<body>
+<div class="bar">
+  <select id="language" onchange="changeLanguage()">
+    <option value="en-US">English</option>
+    <option value="vi-VN">Tiếng Việt</option>
+    <option value="zh-CN">简体中文</option>
+  </select>
+</div>
+<h1 data-lang="title">Network Configuration</h1>
+
+<div class="tabs">
+  <button class="tab active" id="tab-wifi" onclick="switchTab('wifi')" data-lang="wifi_tab">Wi-Fi Config</button>
+  <button class="tab" id="tab-server" onclick="switchTab('server')" data-lang="server_tab">Server</button>
+  <button class="tab" id="tab-advanced" onclick="switchTab('advanced')" data-lang="advanced_tab">Advanced</button>
+</div>
+
+<div id="wifi-tab" class="tab-content active">
+  <div class="section" id="saved_list_container" style="display:none">
+    <h3 data-lang="saved_wifi">Saved Wi-Fi</h3>
+    <ul id="saved_list"></ul>
+  </div>
+
+  <div class="section">
+    <h3 data-lang="new_wifi">New Wi-Fi</h3>
+    <p class="error" id="error"></p>
+    <form onsubmit="submitForm(event)">
+      <label for="ssid">SSID</label>
+      <input type="text" id="ssid" required readonly autocapitalize="off" autocorrect="off" spellcheck="false">
+
+      <label class="inline">
+        <input type="checkbox" id="use_account" onchange="updateAccountVisibility()">
+        <span data-lang="use_account">Network needs an account (company / school / public Wi-Fi)</span>
+      </label>
+      <div id="account_fields" style="display:none">
+        <label for="username" data-lang="username">Username:</label>
+        <input type="text" id="username" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false">
+      </div>
+
+      <label for="password" data-lang="password">Password:</label>
+      <input type="password" id="password" autocomplete="current-password" oninput="checkPasswordSpaces()">
+      <p class="error" id="space_warning" style="font-size:13px"></p>
+      <p style="font-size:13px;color:#52606d;margin:4px 0 0" data-lang="password_hint">Type the password exactly.</p>
+      <input type="submit" id="button" value="Connect" data-lang-value="connect">
+    </form>
+    <p style="font-size:13px;color:#52606d;margin:10px 0 0" data-lang="hint_24g">Choose a 2.4 GHz network.</p>
+    <div id="ap_list" style="margin-top:12px"></div>
+  </div>
+</div>
+
+<div id="server-tab" class="tab-content">
+  <div class="section">
+    <h3 data-lang="server_title">Server / Agent</h3>
+    <p style="font-size:13px;color:#52606d" data-lang="server_hint">The robot connects to the selected server.</p>
+    <label for="srv_key" data-lang="server_key">Robot key:</label>
+    <input type="text" id="srv_key" maxlength="8" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <ul id="server_list"></ul>
+  </div>
+  <div class="section">
+    <h3 data-lang="add_server">Add a server</h3>
+    <p class="error" id="server_error"></p>
+    <label for="srv_name" data-lang="server_name">Name:</label>
+    <input type="text" id="srv_name" maxlength="40" autocapitalize="off">
+    <label for="srv_url" data-lang="server_url">OTA / server URL:</label>
+    <input type="text" id="srv_url" placeholder="https://..." autocapitalize="off" spellcheck="false">
+    <button class="primary" onclick="addServer()" data-lang="add">Add</button>
+  </div>
+</div>
+
+<div id="advanced-tab" class="tab-content">
+  <div class="section">
+    <form onsubmit="submitAdvanced(event)">
+      <div id="ota_row">
+        <label for="ota_url" data-lang="ota_url">Custom OTA URL:</label>
+        <input type="text" id="ota_url" autocapitalize="off" spellcheck="false">
+      </div>
+      <label for="eap_identity" data-lang="eap_identity">Anonymous identity (802.1X, optional):</label>
+      <input type="text" id="eap_identity" placeholder="anonymous@school.edu" autocapitalize="off" spellcheck="false">
+      <label for="max_tx_power" data-lang="max_tx_power">Wi-Fi Max TX Power:</label>
+      <input type="number" id="max_tx_power" min="8" max="84">
+      <label class="inline"><input type="checkbox" id="remember_bssid"><span data-lang="remember_bssid">Remember BSSID when connecting to Wi-Fi</span></label>
+      <label class="inline" id="sleep_row"><input type="checkbox" id="sleep_mode"><span data-lang="sleep_mode">Enable Sleep Mode</span></label>
+      <input type="submit" value="Save" data-lang-value="save">
+    </form>
+  </div>
+</div>
+
+<div id="toast"></div>
+<div id="overlay"><span data-lang="connecting">Connecting...</span></div>
+
+<script>
+const T = {
+  'en-US': {
+    title: 'Network Configuration', wifi_tab: 'Wi-Fi Config', advanced_tab: 'Advanced',
+    saved_wifi: 'Saved Wi-Fi', new_wifi: 'New Wi-Fi', password: 'Password:', connect: 'Connect Wi-Fi',
+    connecting: 'Connecting...', select_wifi: 'Select a 2.4G Wi-Fi from the list below:',
+    select_wifi_5g: 'Select a Wi-Fi from the list below:', scanning: 'Scanning...',
+    ota_url: 'Custom OTA URL:', max_tx_power: 'Wi-Fi Max TX Power:',
+    eap_identity: 'Anonymous identity (802.1X, optional):',
+    remember_bssid: 'Remember BSSID when connecting to Wi-Fi', sleep_mode: 'Enable Sleep Mode',
+    save: 'Save', saved: 'Saved', config_success: 'Configuration saved!',
+    use_account: 'Network needs an account (company / school / public Wi-Fi)', username: 'Username:',
+    username_required: 'Please enter the username for this network', set_default: 'Use', remove: 'Delete',
+    server_tab: 'Server', server_title: 'Server / Agent',
+    server_hint: 'The robot connects to the selected server. Agents (name, language, voice, role) are configured on the dashboard of that server. Changes apply when the robot connects.',
+    add_server: 'Add a server', server_name: 'Name:', server_url: 'OTA / server URL:', add: 'Add',
+    server_default: 'Default server', server_active: 'In use', server_use: 'Use',
+    server_key: 'Robot key (8 characters shown on the robot screen):', invalid_key: 'Wrong robot key',
+    signal_strong: 'Strong', signal_medium: 'Medium', signal_weak: 'Weak',
+    hint_24g: 'Choose a 2.4 GHz network. If a name appears twice, the strongest signal is shown.',
+    password_hint: 'Type the password exactly, with capitals, and no extra space at the start or end.',
+    space_warning: 'The password starts or ends with a space. Is that intended?'
+  },
+  'vi-VN': {
+    title: 'Cấu hình mạng', wifi_tab: 'Cấu hình Wi-Fi', advanced_tab: 'Tùy chọn nâng cao',
+    saved_wifi: 'Wi-Fi đã lưu', new_wifi: 'Wi-Fi mới', password: 'Mật khẩu:', connect: 'Kết nối Wi-Fi',
+    connecting: 'Đang kết nối...', select_wifi: 'Chọn Wi-Fi 2.4G từ danh sách bên dưới:',
+    select_wifi_5g: 'Chọn Wi-Fi từ danh sách bên dưới:', scanning: 'Đang quét...',
+    ota_url: 'Địa chỉ OTA tùy chỉnh:', max_tx_power: 'Công suất phát Wi-Fi tối đa:',
+    eap_identity: 'Danh tính ẩn danh (802.1X, tùy chọn):',
+    remember_bssid: 'Ghi nhớ BSSID khi kết nối với Wi-Fi', sleep_mode: 'Bật chế độ ngủ',
+    save: 'Lưu', saved: 'Đã lưu', config_success: 'Đã lưu cấu hình!',
+    use_account: 'Mạng cần tài khoản (công ty / trường học / Wi-Fi công cộng)', username: 'Tài khoản:',
+    username_required: 'Vui lòng nhập tài khoản của mạng này', set_default: 'Dùng', remove: 'Xóa',
+    server_tab: 'Máy chủ', server_title: 'Máy chủ / Agent',
+    server_hint: 'Robot kết nối tới máy chủ đã chọn. Agent (tên, ngôn ngữ, giọng nói, vai trò) được cấu hình trên bảng điều khiển của máy chủ đó. Thay đổi có hiệu lực khi robot kết nối.',
+    add_server: 'Thêm máy chủ', server_name: 'Tên:', server_url: 'Địa chỉ OTA / máy chủ:', add: 'Thêm',
+    server_default: 'Máy chủ mặc định', server_active: 'Đang dùng', server_use: 'Dùng',
+    server_key: 'Mã của robot (8 ký tự hiện trên màn hình robot):', invalid_key: 'Sai mã của robot',
+    signal_strong: 'Mạnh', signal_medium: 'Trung bình', signal_weak: 'Yếu',
+    hint_24g: 'Chọn mạng Wi-Fi 2.4 GHz. Nếu một tên xuất hiện hai lần, chỉ hiện sóng mạnh nhất.',
+    password_hint: 'Nhập đúng mật khẩu, đúng chữ hoa/thường, không thừa khoảng trắng ở đầu hoặc cuối.',
+    space_warning: 'Mật khẩu có khoảng trắng ở đầu hoặc cuối. Có đúng ý bạn không?'
+  },
+  'zh-CN': {
+    title: '网络配置', wifi_tab: 'Wi-Fi 配置', advanced_tab: '高级选项',
+    saved_wifi: '已保存的 Wi-Fi', new_wifi: '新的 Wi-Fi', password: '密码:', connect: '连接',
+    connecting: '正在连接...', select_wifi: '从下面列表选择 2.4G Wi-Fi:',
+    select_wifi_5g: '从下面列表选择 Wi-Fi:', scanning: '扫描中...',
+    ota_url: '自定义 OTA 地址:', max_tx_power: 'Wi-Fi 最大发射功率:',
+    eap_identity: '匿名身份（802.1X，可选）:',
+    remember_bssid: '连接 Wi-Fi 时记住 BSSID', sleep_mode: '启用睡眠模式',
+    save: '保存', saved: '已保存', config_success: '配置成功！',
+    use_account: '网络需要账号（企业 / 学校 / 公共 Wi-Fi）', username: '账号:',
+    username_required: '请输入此网络的账号', set_default: '使用', remove: '删除',
+    server_tab: '服务器', server_title: '服务器 / 智能体',
+    server_hint: '机器人连接到所选服务器。智能体（名称、语言、声音、角色）在该服务器的控制台中配置。更改在机器人连接时生效。',
+    add_server: '添加服务器', server_name: '名称:', server_url: 'OTA / 服务器地址:', add: '添加',
+    server_default: '默认服务器', server_active: '使用中', server_use: '使用',
+    server_key: '机器人密钥（显示在机器人屏幕上的 8 个字符）:', invalid_key: '机器人密钥错误',
+    signal_strong: '强', signal_medium: '中', signal_weak: '弱',
+    hint_24g: '请选择 2.4 GHz 网络。同名网络只显示信号最强的。',
+    password_hint: '请准确输入密码（区分大小写），开头和结尾不要有多余空格。',
+    space_warning: '密码开头或结尾有空格，是否有意为之？'
+  }
+};
+
+const $ = id => document.getElementById(id);
+const ssid = $('ssid'), button = $('button'), errorBox = $('error');
+let support5G = false;
+let lang = 'en-US';
+
+function pickLanguage() {
+  const wanted = (new URLSearchParams(location.search).get('lang') ||
+                  localStorage.getItem('preferred_language') || navigator.language || 'en-US').toLowerCase();
+  if (wanted.startsWith('vi')) return 'vi-VN';
+  if (wanted.startsWith('zh')) return 'zh-CN';
+  return 'en-US';
+}
+function tr(key) { return (T[lang] && T[lang][key]) || T['en-US'][key] || key; }
+
+function changeLanguage() {
+  lang = $('language').value;
+  localStorage.setItem('preferred_language', lang);
+  document.title = tr('title');
+  document.querySelectorAll('[data-lang]').forEach(e => { e.textContent = tr(e.dataset.lang); });
+  document.querySelectorAll('[data-lang-value]').forEach(e => { e.value = tr(e.dataset.langValue); });
+  loadSaved();
+}
+
+function switchTab(name) {
+  ['wifi', 'server', 'advanced'].forEach(n => {
+    $(n + '-tab').classList.toggle('active', n === name);
+    $('tab-' + n).classList.toggle('active', n === name);
+  });
+  if (name === 'advanced') loadAdvanced();
+  if (name === 'server') loadServers();
+}
+
+function toast(text) {
+  const t = $('toast'); t.textContent = text; t.style.display = 'block';
+  setTimeout(() => { t.style.display = 'none'; }, 2000);
+}
+
+function updateAccountVisibility() {
+  $('account_fields').style.display = $('use_account').checked ? '' : 'none';
+}
+
+// The SSID field stays read-only until the user taps it, so a captive-portal webview does
+// not pop up the keyboard on its own.
+ssid.addEventListener('click', () => ssid.removeAttribute('readonly'));
+ssid.addEventListener('blur', () => ssid.setAttribute('readonly', ''));
+
+async function getJson(url) { const r = await fetch(url); return r.json(); }
+
+async function loadSaved() {
+  try {
+    const list = await getJson('/saved/list');
+    const ul = $('saved_list'); ul.innerHTML = '';
+    $('saved_list_container').style.display = list.length ? '' : 'none';
+    list.forEach((name, index) => {
+      const li = document.createElement('li');
+      const span = document.createElement('span'); span.textContent = name; li.appendChild(span);
+      const use = document.createElement('button'); use.textContent = tr('set_default');
+      use.onclick = async () => { await fetch('/saved/set_default?index=' + index); loadSaved(); };
+      const del = document.createElement('button'); del.textContent = tr('remove');
+      del.onclick = async () => { await fetch('/saved/delete?index=' + index); loadSaved(); };
+      li.appendChild(use); li.appendChild(del); ul.appendChild(li);
+    });
+  } catch (e) { /* ignore */ }
+}
+
+// One entry per network name (the strongest), best signal first
+function strongestPerSsid(aps) {
+  const best = new Map();
+  aps.forEach(ap => {
+    if (!ap.ssid) return;
+    const known = best.get(ap.ssid);
+    if (!known || ap.rssi > known.rssi) best.set(ap.ssid, ap);
+  });
+  return Array.from(best.values()).sort((a, b) => b.rssi - a.rssi);
+}
+function signalWord(rssi) {
+  return tr(rssi >= -60 ? 'signal_strong' : (rssi >= -70 ? 'signal_medium' : 'signal_weak'));
+}
+
+function checkPasswordSpaces() {
+  const v = $('password').value;
+  $('space_warning').textContent = (v.length && (v[0] === ' ' || v[v.length - 1] === ' ')) ? tr('space_warning') : '';
+}
+
+async function loadAPs() {
+  if (button.disabled) { setTimeout(loadAPs, 5000); return; }
+  const box = $('ap_list');
+  if (!box.querySelector('a')) box.innerHTML = '<p class="scanning">' + tr('scanning') + '</p>';
+  try {
+    const data = await getJson('/scan');
+    support5G = data.support_5g;
+    box.innerHTML = '';
+    const hint = document.createElement('p');
+    hint.textContent = support5G ? tr('select_wifi_5g') : tr('select_wifi');
+    box.appendChild(hint);
+    strongestPerSsid(data.aps).forEach(ap => {
+      const a = document.createElement('a'); a.href = '#';
+      const icon = ap.authmode === 0 ? '🌐' : (ap.enterprise ? '🏢' : '🔒');
+      a.textContent = ap.ssid + ' · ' + signalWord(ap.rssi) + ' (' + ap.rssi + ' dBm) ' + icon;
+      a.onclick = ev => {
+        ev.preventDefault();
+        ssid.value = ap.ssid;
+        // 802.1X (company / school) networks always need an account
+        $('use_account').checked = !!ap.enterprise;
+        updateAccountVisibility();
+      };
+      box.appendChild(a);
+    });
+  } catch (e) { /* retry below */ }
+  setTimeout(loadAPs, 5000);
+}
+
+async function submitForm(event) {
+  event.preventDefault();
+  errorBox.textContent = '';
+  if ($('use_account').checked && $('username').value.trim() === '') {
+    errorBox.textContent = tr('username_required');
+    return;
+  }
+  const payload = { ssid: ssid.value, password: $('password').value };
+  if ($('use_account').checked) payload.username = $('username').value.trim();
+
+  button.disabled = true;
+  $('overlay').classList.add('show');
+  try {
+    const response = await fetch('/submit', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const data = await response.json();
+    if (!data.success) throw new Error(data.error || 'Connection failed');
+    const done = new URL('/done.html', location.href);
+    done.searchParams.set('lang', lang);
+    done.searchParams.set('message', tr('config_success'));
+    location.href = done.pathname + done.search;
+  } catch (err) {
+    $('overlay').classList.remove('show');
+    errorBox.textContent = err.message;
+    button.disabled = false;
+  }
+}
+
+async function loadServers() {
+  try {
+    const data = await getJson('/server/list');
+    const ul = $('server_list'); ul.innerHTML = '';
+    const rows = [{ name: tr('server_default'), url: data.default_url, builtin: true }]
+      .concat(data.profiles.map((p, i) => ({ name: p.name, url: p.url, index: i })));
+    rows.forEach(row => {
+      const li = document.createElement('li');
+      const label = document.createElement('span');
+      const active = row.url === data.active_url;
+      label.textContent = (active ? '✓ ' : '') + row.name + ' — ' + row.url;
+      li.appendChild(label);
+      if (!active) {
+        const use = document.createElement('button'); use.textContent = tr('server_use');
+        use.onclick = async () => {
+          const r = await postJson('/server/select', { url: row.url, key: serverKey() });
+          if (!r.success) toast(keyError(r.error));
+          loadServers();
+        };
+        li.appendChild(use);
+      } else {
+        const mark = document.createElement('button'); mark.textContent = tr('server_active'); mark.disabled = true;
+        li.appendChild(mark);
+      }
+      if (!row.builtin) {
+        const del = document.createElement('button'); del.textContent = tr('remove');
+        del.onclick = async () => {
+          const r = await postJson('/server/remove', { index: row.index, key: serverKey() });
+          if (!r.success) toast(keyError(r.error));
+          loadServers();
+        };
+        li.appendChild(del);
+      }
+      ul.appendChild(li);
+    });
+  } catch (e) { /* ignore */ }
+}
+
+function serverKey() { return $('srv_key').value.trim(); }
+function keyError(code) { return code === 'invalid_key' ? tr('invalid_key') : (code || 'Error'); }
+
+async function postJson(url, body) {
+  const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  return r.json();
+}
+
+async function addServer() {
+  $('server_error').textContent = '';
+  const result = await postJson('/server/add', { name: $('srv_name').value.trim(), url: $('srv_url').value.trim(), key: serverKey() });
+  if (!result.success) { $('server_error').textContent = keyError(result.error); return; }
+  await postJson('/server/select', { url: $('srv_url').value.trim(), key: serverKey() });
+  $('srv_name').value = ''; $('srv_url').value = '';
+  loadServers();
+}
+
+async function loadAdvanced() {
+  try {
+    const c = await getJson('/advanced/config');
+    $('ota_row').style.display = c.show_ota_config ? '' : 'none';
+    $('sleep_row').style.display = c.show_sleep_config ? '' : 'none';
+    $('ota_url').value = c.ota_url || '';
+    $('eap_identity').value = c.eap_identity || '';
+    $('max_tx_power').value = c.max_tx_power;
+    $('remember_bssid').checked = !!c.remember_bssid;
+    $('sleep_mode').checked = !!c.sleep_mode;
+  } catch (e) { /* ignore */ }
+}
+
+async function submitAdvanced(event) {
+  event.preventDefault();
+  const payload = {
+    max_tx_power: parseInt($('max_tx_power').value, 10),
+    remember_bssid: $('remember_bssid').checked,
+    sleep_mode: $('sleep_mode').checked,
+    eap_identity: $('eap_identity').value.trim()
+  };
+  if ($('ota_row').style.display !== 'none') payload.ota_url = $('ota_url').value;
+  try {
+    const r = await fetch('/advanced/submit', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    toast(r.ok ? tr('saved') : 'Error');
+  } catch (e) { toast('Error'); }
+}
+
+lang = pickLanguage();
+$('language').value = lang;
+changeLanguage();
+loadAPs();
+</script>
+</body>
+</html>

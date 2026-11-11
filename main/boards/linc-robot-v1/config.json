@@ -1,0 +1,13 @@
+{
+    "type": "linc-robot-v1",
+    "target": "esp32s3",
+    "builds": [
+        {
+            "name": "linc-robot-v1",
+            "sdkconfig_append": [
+                "CONFIG_ESP_WIFI_ENTERPRISE_SUPPORT=y",
+                "CONFIG_WIFI_CONNECT_PORTAL_CHECK=y"
+            ]
+        }
+    ]
+}

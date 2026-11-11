@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nạp firmware cho robot</title>
+<script type="module" src="https://unpkg.com/esp-web-tools@10.0.1/dist/web/install-button.js?module"></script>
+<style>
+  body{font:16px system-ui,sans-serif;max-width:560px;margin:2rem auto;padding:0 1rem;line-height:1.5}
+  code{background:#eee;padding:.1rem .3rem;border-radius:4px}
+</style>
+</head>
+<body>
+<h1>Nạp firmware cho robot</h1>
+<ol>
+  <li>Dùng <b>Chrome</b> hoặc <b>Edge</b> trên máy tính (Web Serial không chạy trên Firefox / Safari / điện thoại).</li>
+  <li>Cắm robot vào máy bằng cáp USB có truyền dữ liệu.</li>
+  <li>Bấm nút bên dưới, chọn cổng COM của robot rồi chờ nạp xong.</li>
+</ol>
+<esp-web-install-button manifest="manifest.json">
+  <button slot="activate">Kết nối và nạp firmware</button>
+  <span slot="unsupported">Trình duyệt này không hỗ trợ Web Serial. Hãy dùng Chrome hoặc Edge.</span>
+  <span slot="not-allowed">Cần mở trang qua HTTPS (hoặc localhost).</span>
+</esp-web-install-button>
+<p>Trước khi dùng, đặt file <code>merged-binary.bin</code> (lấy từ bản release, hoặc tạo bằng <code>idf.py merge-bin</code>) cùng thư mục với trang này.
+Chạy thử trên máy: <code>python -m http.server 8000</code> rồi mở <code>http://localhost:8000</code>.</p>
+</body>
+</html>

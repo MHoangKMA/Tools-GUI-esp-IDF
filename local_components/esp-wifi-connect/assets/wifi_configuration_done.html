@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Done</title>
+<style>
+  body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+         font: 18px system-ui, sans-serif; background: #f2f4f7; color: #1d2733; text-align: center; padding: 24px; }
+  .card { background: #fff; border-radius: 14px; padding: 28px 22px; max-width: 420px; }
+  .check { font-size: 48px; color: #2e9e5b; }
+  small { display: block; margin-top: 12px; color: #52606d; font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="check">&#10003;</div>
+  <p id="message">Configuration successful!</p>
+  <small id="hint">The device now leaves setup mode and connects to the network.</small>
+</div>
+<script>
+const params = new URLSearchParams(location.search);
+const lang = (params.get('lang') || 'en-US').toLowerCase();
+const hints = {
+  vi: 'Thiết bị sắp khởi động lại và kết nối mạng.',
+  zh: '设备即将重新启动并连接网络。',
+  en: 'The device will restart and connect to the network.'
+};
+if (params.get('message')) document.getElementById('message').textContent = params.get('message');
+document.getElementById('hint').textContent = hints[lang.slice(0, 2)] || hints.en;
+// Saving only stored the credentials: ask the device to leave configuration mode so it
+// connects with them. The hotspot disappears afterwards, which is expected.
+setTimeout(() => { fetch('/exit', { method: 'POST' }).catch(() => {}); }, 1500);
+</script>
+</body>
+</html>

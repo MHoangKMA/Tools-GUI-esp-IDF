@@ -1,0 +1,11 @@
+{
+  "name": "Linc Robot V1 (xiaozhi-esp32)",
+  "version": "see firmware",
+  "new_install_prompt_erase": true,
+  "builds": [
+    {
+      "chipFamily": "ESP32-S3",
+      "parts": [{ "path": "merged-binary.bin", "offset": 0 }]
+    }
+  ]
+}
